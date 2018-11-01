@@ -1,6 +1,7 @@
 # Graphical Image Categorizer
 
-**Setup:**
+**Dependancies:**
+
 * Python 3.5
 * Tensorflow
 * Tkinter
