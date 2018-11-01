@@ -12,6 +12,7 @@ Author: Ethan Dinnen
 """
 import tkinter as tk
 from PIL import Image, ImageTk
+import argparse
 import os
 import numpy as np
 import cv2
@@ -22,6 +23,8 @@ import json
 from shutil import copyfile
 
 from label_image import *
+
+FLAGS = None
 
 class ImageClassifier(tk.Frame):
     """
@@ -44,7 +47,7 @@ class ImageClassifier(tk.Frame):
         # Initialize some variables we will need
         self.category = '' # The selected category for the image
         self.shoot_name = '' # The name of the current image's parent directory
-        self.labels = load_labels("./output_labels.txt")
+        self.labels = load_labels(FLAGS.labels)
 
         # Load categories
         if not pathlib.Path("./categories.txt").exists(): # Create our category file if it does not exist
@@ -53,7 +56,7 @@ class ImageClassifier(tk.Frame):
                     for category in next(os.walk('./categorized'))[1]:
                         categories.write("{}\n".format(category))
             else:
-                copyfile("./output_labels.txt", "./categories.txt") # Otherwise just copy the output_labels file
+                copyfile(FLAGS.labels, "./categories.txt") # Otherwise just copy the output_labels file
         self.categories = load_labels("./categories.txt")
 
         # Create the folders for each category
@@ -66,7 +69,7 @@ class ImageClassifier(tk.Frame):
         self.root.wm_title("Classify Image")
 
         # Create the list of images to process
-        src = "./TestImages/"
+        src = FLAGS.images
         path = pathlib.Path(src)
         completed = "./categorized"
         completedPath = pathlib.Path(completed)
@@ -155,13 +158,14 @@ class ImageClassifier(tk.Frame):
         It then deletes the normalized file and creates the dropdown
         selector for the editor.
         """
-        model_file = "./output_graph.pb" # The frozen model
+        # model_file = "./output_graph.pb" # The frozen model
+        model_file = FLAGS.model
         input_height = 299
         input_width = 299
         input_mean = 0
         input_std = 255
-        input_layer = "Placeholder" # The name of our input layer
-        output_layer = "model" # The name of our output layer
+        input_layer = FLAGS.input_layer # The name of our input layer
+        output_layer = FLAGS.output_layer # The name of our output layer
         # Load the normalized image
         image = str(re.sub(r'\.jpg', '', str(self.list_images[self.counter]), flags=re.IGNORECASE) + '.norm.jpg')
 
@@ -386,7 +390,6 @@ class ImageClassifier(tk.Frame):
         self.categories = load_labels("./categories.txt")
         self.create_folders()
 
-
     def write_metadata(self, dst):
         """
         Write the current image's metadata to 'metadata.json' with corresponding image files
@@ -443,6 +446,40 @@ class ImageClassifier(tk.Frame):
         return re.sub(r'[^\w\.]+', '-', string)
 
 if __name__ == "__main__":
+    # Add an argument parser so we can have variable settings
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--labels',
+        type=str,
+        default='./output_labels.txt',
+        help='Path to the output labels file to use.'
+    )
+    parser.add_argument(
+        '--model',
+        type=str,
+        default='./output_graph.pb',
+        help='Path to the frozen model file to use in classifying'
+    )
+    parser.add_argument(
+        '--input_layer',
+        type=str,
+        default='Placeholder',
+        help='The name of the input layer in the model'
+    )
+    parser.add_argument(
+        '--output_layer',
+        type=str,
+        default='model',
+        help='The name of the output layer in the model'
+    )
+    parser.add_argument(
+        '--images',
+        type=str,
+        default='./images',
+        help='Path to the folder containing the images to classify'
+    )
+    FLAGS, unparsed = parser.parse_known_args()
+    
     root = tk.Tk()
     classifier = ImageClassifier(root)
     tk.mainloop()
